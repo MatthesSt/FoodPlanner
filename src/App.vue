@@ -79,7 +79,11 @@ function addIngredient(dish: Dish) {
 }
 
 function deleteIngredient(dish: Dish, ingredient: Dish["ingredients"][0]) {
-  dish.ingredients = dish.ingredients.filter((i) => i.id !== ingredient.id);
+  if (
+    dish &&
+    window.confirm(`Sicher, dass Sie "${ingredient.name}" löschen wollen?`)
+  )
+    dish.ingredients = dish.ingredients.filter((i) => i.id !== ingredient.id);
 }
 
 const currentDish = ref<Dish | null>(null);
@@ -92,15 +96,19 @@ function saveUser() {
 const searchedIngredients = ref<string[]>([]);
 
 const filteredDishes = computed(() =>
-  dishes.value.filter((d) =>
-    searchedIngredients.value.every((i) =>
-      d.ingredients.some((di) => di.name.includes(i))
+  dishes.value
+    .filter((d) =>
+      searchedIngredients.value.every((i) =>
+        d.ingredients.some((di) => di.name.includes(i))
+      )
     )
-  )
+    .sort((a, b) => a.name.localeCompare(b.name))
 );
 
 const searchableIngredients = computed(() =>
-  dishes.value.flatMap((d) => d.ingredients.map((i) => i.name))
+  [
+    ...new Set(dishes.value.flatMap((d) => d.ingredients.map((i) => i.name))),
+  ].sort((a, b) => a.localeCompare(b))
 );
 
 const authors = computed(() =>
@@ -114,59 +122,60 @@ const authors = computed(() =>
     v-model="showDishDialog"
     @click.stop="showDishDialog = false"
   >
-    <v-container>
-      <v-card @click.stop="() => {}" :link="false">
-        <v-form class="ma-2">
-          <v-text-field
-            variant="outlined"
-            :label="currentDish.id"
-            hide-details
-            v-model="currentDish.name"
-          />
-          <v-divider class="my-3"></v-divider>
-          <v-card-title>Rezept: </v-card-title>
-          <v-textarea v-model="currentDish.description"></v-textarea>
-          <v-divider class="my-3"></v-divider>
-          <v-table height="300px" fixed-header>
-            <thead>
-              <tr class="bg-white">
-                <td class="pa-1">Zutat</td>
-                <td class="pa-1" style="width: 30%">Menge</td>
-                <td style="width: 30px"></td>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="ingredient in currentDish.ingredients">
-                <td class="pa-1">
-                  <v-text-field hide-details v-model="ingredient.name" />
-                </td>
-                <td class="pa-1">
-                  <v-text-field hide-details v-model="ingredient.amount" />
-                </td>
-                <td class="pa-0">
-                  <v-btn
-                    class="px-2 py-2"
-                    style="min-width: 0"
-                    color="primary"
-                    @click.stop="deleteIngredient(currentDish, ingredient)"
-                  >
-                    <v-icon icon="mdi-delete"></v-icon>
-                  </v-btn>
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
-          <div class="d-flex justify-space-between">
-            <v-btn color="primary" @click.stop="addIngredient(currentDish)">
-              <v-icon icon="mdi-plus"></v-icon>
-            </v-btn>
-            <v-btn color="success" @click.stop="saveDish(currentDish)"
-              ><v-icon icon="mdi-check"></v-icon
-            ></v-btn>
-          </div>
-        </v-form>
-      </v-card>
-    </v-container>
+    <v-card @click.stop="() => {}" :link="false">
+      <v-form class="ma-2">
+        <v-text-field
+          variant="outlined"
+          label="Name des Gerichts"
+          hide-details
+          v-model="currentDish.name"
+        />
+        <v-divider class="my-3"></v-divider>
+        <v-textarea
+          label="REZEPT"
+          hide-details
+          v-model="currentDish.description"
+        ></v-textarea>
+        <v-divider class="my-3"></v-divider>
+        <v-table>
+          <thead>
+            <tr class="bg-white">
+              <td class="pa-1">Zutat</td>
+              <td class="pa-1">Menge</td>
+              <td style="width: 0" class="pa-0"></td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="ingredient in currentDish.ingredients">
+              <td class="pa-1">
+                <v-text-field hide-details v-model="ingredient.name" />
+              </td>
+              <td class="pa-1">
+                <v-text-field hide-details v-model="ingredient.amount" />
+              </td>
+              <td class="pa-0">
+                <v-btn
+                  class="px-0 py-2"
+                  style="min-width: 0"
+                  color="error"
+                  @click.stop="deleteIngredient(currentDish, ingredient)"
+                >
+                  <v-icon icon="mdi-close"></v-icon>
+                </v-btn>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+        <div class="d-flex justify-space-between">
+          <v-btn color="primary" @click.stop="addIngredient(currentDish)">
+            <v-icon icon="mdi-plus"></v-icon>
+          </v-btn>
+          <v-btn color="success" @click.stop="saveDish(currentDish)"
+            ><v-icon icon="mdi-check"></v-icon
+          ></v-btn>
+        </div>
+      </v-form>
+    </v-card>
   </v-dialog>
   <v-container class="pa-0">
     <div style="overflow: auto">
