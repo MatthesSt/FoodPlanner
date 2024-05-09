@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import * as storage from "./storage";
 import { Dish } from "./types";
 import * as db from "./firebase";
@@ -88,6 +88,22 @@ const editingUser = ref(false);
 function saveUser() {
   storage.setCurrentUser(user.value);
 }
+
+const searchQuery = ref("");
+
+const filteredDishes = computed(() =>
+  dishes.value.filter(
+    (d) =>
+      d.name.includes(searchQuery.value) ||
+      d.author.includes(searchQuery.value) ||
+      d.description.includes(searchQuery.value) ||
+      d.ingredients.some(
+        (i) =>
+          i.name.includes(searchQuery.value) ||
+          i.amount.includes(searchQuery.value)
+      )
+  )
+);
 </script>
 
 <template>
@@ -185,8 +201,16 @@ function saveUser() {
       <v-table fixed-header height="800px">
         <thead style="background-color: white">
           <tr>
-            <td><span class="text-h5">Gerichte</span></td>
-            <td style="width: 0">
+            <td>
+              <v-text-field
+                variant="underlined"
+                hide-details
+                label="Gerichte"
+                v-model="searchQuery"
+                append-icon="mdi-magnify"
+              ></v-text-field>
+            </td>
+            <td style="width: 168px">
               <div class="d-flex justify-end">
                 <v-btn color="primary" @click.stop="showCreateDish">
                   <v-icon icon="mdi-plus"></v-icon>
@@ -196,7 +220,7 @@ function saveUser() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="dish in dishes">
+          <tr v-for="dish in filteredDishes">
             <td>{{ dish.name }}</td>
             <td>
               <div class="d-flex justify-end">
