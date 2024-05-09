@@ -122,7 +122,7 @@ const authors = computed(() =>
     v-model="showDishDialog"
     @click.stop="showDishDialog = false"
   >
-    <v-card @click.stop="() => {}" :link="false">
+    <v-card @click.stop="() => {}" :link="false" class="bg-black">
       <v-form class="ma-2">
         <v-text-field
           variant="outlined"
@@ -137,9 +137,9 @@ const authors = computed(() =>
           v-model="currentDish.description"
         ></v-textarea>
         <v-divider class="my-3"></v-divider>
-        <v-table>
+        <v-table class="bg-black">
           <thead>
-            <tr class="bg-white">
+            <tr>
               <td class="pa-1">Zutat</td>
               <td class="pa-1">Menge</td>
               <td style="width: 0" class="pa-0"></td>
@@ -211,9 +211,9 @@ const authors = computed(() =>
           ><v-icon icon="mdi-check"></v-icon
         ></v-btn>
       </header>
-      <main>
-        <v-table fixed-header height="800px">
-          <thead style="background-color: white">
+      <main class="bg-black pt-2">
+        <v-table fixed-header height="800px" class="bg-black">
+          <thead style="">
             <tr>
               <td class="filter">
                 <v-select
