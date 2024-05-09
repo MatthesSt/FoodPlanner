@@ -215,7 +215,7 @@ const authors = computed(() =>
         <v-table fixed-header height="800px">
           <thead style="background-color: white">
             <tr>
-              <td>
+              <td class="filter">
                 <v-select
                   :items="searchableIngredients"
                   v-model="searchedIngredients"
@@ -223,9 +223,20 @@ const authors = computed(() =>
                   hide-details
                   append-icon="mdi-close"
                   @click:append="searchedIngredients = []"
-                ></v-select>
+                  :placeholder="filteredDishes.length + ' Gerichte'"
+                >
+                  <template v-slot:selection="{ index }">
+                    <span class="text-grey" v-if="index == 0">
+                      {{
+                        filteredDishes.length == 1
+                          ? "1 Gericht"
+                          : filteredDishes.length + " Gerichte"
+                      }}
+                    </span>
+                  </template></v-select
+                >
               </td>
-              <td style="width: 168px">
+              <td style="padding-left: 0; width: 152px">
                 <div class="d-flex justify-end">
                   <v-btn color="primary" @click.stop="showCreateDish">
                     <v-icon icon="mdi-plus"></v-icon>
@@ -238,14 +249,14 @@ const authors = computed(() =>
             <template v-for="author of authors">
               <tr>
                 <td>Gerichte von: {{ author }}</td>
-                <td></td>
+                <td style="padding-left: 0"></td>
               </tr>
               <template
                 v-for="dish in filteredDishes.filter((d) => d.author == author)"
               >
                 <tr>
                   <td>{{ dish.name }}</td>
-                  <td>
+                  <td style="padding-left: 0">
                     <div class="d-flex justify-end">
                       <v-btn color="error" @click.stop="deleteDish(dish.id)">
                         <v-icon icon="mdi-delete"></v-icon>
@@ -269,4 +280,8 @@ const authors = computed(() =>
   </v-container>
 </template>
 
-<style scoped></style>
+<style>
+.filter .v-field__input {
+  padding-inline: 5px;
+}
+</style>

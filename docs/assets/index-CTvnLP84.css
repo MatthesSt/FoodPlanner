@@ -3,6 +3,9 @@ body {
   background-color: #333;
   overflow: hidden;
 }
+.filter .v-field__input {
+  padding-inline: 5px;
+}
 @font-face {
   font-family: Material Design Icons;
   src: url(./materialdesignicons-webfont-CSr8KVlo.eot?v=7.4.47);
