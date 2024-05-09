@@ -89,20 +89,18 @@ function saveUser() {
   storage.setCurrentUser(user.value);
 }
 
-const searchQuery = ref("");
+const searchedIngredients = ref<string[]>([]);
 
 const filteredDishes = computed(() =>
-  dishes.value.filter(
-    (d) =>
-      d.name.includes(searchQuery.value) ||
-      d.author.includes(searchQuery.value) ||
-      d.description.includes(searchQuery.value) ||
-      d.ingredients.some(
-        (i) =>
-          i.name.includes(searchQuery.value) ||
-          i.amount.includes(searchQuery.value)
-      )
+  dishes.value.filter((d) =>
+    searchedIngredients.value.every((i) =>
+      d.ingredients.some((di) => di.name.includes(i))
+    )
   )
+);
+
+const searchableIngredients = computed(() =>
+  dishes.value.flatMap((d) => d.ingredients.map((i) => i.name))
 );
 </script>
 
@@ -202,13 +200,14 @@ const filteredDishes = computed(() =>
         <thead style="background-color: white">
           <tr>
             <td>
-              <v-text-field
-                variant="underlined"
+              <v-select
+                :items="searchableIngredients"
+                v-model="searchedIngredients"
+                multiple
                 hide-details
-                label="Gerichte"
-                v-model="searchQuery"
-                append-icon="mdi-magnify"
-              ></v-text-field>
+                append-icon="mdi-close"
+                @click:append="searchedIngredients = []"
+              ></v-select>
             </td>
             <td style="width: 168px">
               <div class="d-flex justify-end">
