@@ -1,21 +1,25 @@
+import { migrateDish } from "./migrations";
+import { Dish } from "./types";
 import { generateRandomUser } from "./utils";
 
-type Table = "dishes";
-
-export function set<T>(table: Table, data: T) {
-  localStorage.setItem(table, JSON.stringify(data));
+export function setDishes(data: Dish[]) {
+  localStorage.setItem("dishes", JSON.stringify(data));
 }
 
-export function add<T>(table: Table, data: T) {
-  const existing = get<T>(table) || [];
-  existing.push(data);
-  set(table, existing);
+export function add(dish: Dish) {
+  const existing = getDishes() || [];
+  existing.push(dish);
+  setDishes(existing);
 }
 
-export function get<T>(table: Table): T[] | null {
-  const data = localStorage.getItem(table);
+export function getDishes() {
+  const data = localStorage.getItem("dishes");
   if (data) {
-    return JSON.parse(data).sort((a: any, b: any) => a.id - b.id);
+    return (JSON.parse(data) as Dish[])
+      .map((d) => migrateDish(d))
+      .sort((a, b) =>
+        a.updated_at.toString().localeCompare(b.updated_at.toString())
+      );
   }
   return null;
 }

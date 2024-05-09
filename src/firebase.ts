@@ -8,8 +8,10 @@ import {
   QueryDocumentSnapshot,
   updateDoc,
   deleteDoc,
+  DocumentReference,
 } from "firebase/firestore";
 import { Dish } from "./types";
+import { migrateDish } from "./migrations";
 
 export async function getDishes(): Promise<Dish[]> {
   const docs: QueryDocumentSnapshot<DocumentData>[] = [];
@@ -22,19 +24,24 @@ export async function getDishes(): Promise<Dish[]> {
   );
   return docs
     .map((doc) => ({ id: doc.id, data: doc.data() }))
-    .map((dish) => ({ ...dish.data, id: dish.id } as Dish));
+    .map((dish) => migrateDish({ ...dish.data, id: dish.id } as Dish));
 }
 
-export async function saveDish(dish: Dish): Promise<string> {
-  if (dish.id) {
-    await updateDoc(doc(getFirestore(), "dishes", dish.id), {
-      ...dish,
-    });
-    return dish.id;
+export async function saveDish(dish: Dish) {
+  {
+    let response;
+    if (dish.id) {
+      updateDoc(doc(getFirestore(), "dishes", dish.id), {
+        ...dish,
+      });
+      response = doc(getFirestore(), "dishes", dish.id);
+    } else {
+      response = addDoc(collection(getFirestore(), "dishes"), {
+        ...dish,
+      });
+    }
+    return response;
   }
-  return await addDoc(collection(getFirestore(), "dishes"), {
-    ...dish,
-  }).then((docRef) => docRef.id);
 }
 
 export async function deleteDish(id: string): Promise<void> {

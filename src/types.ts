@@ -4,4 +4,6 @@ export type Dish = {
   ingredients: { id: number; name: string; amount: string }[];
   description: string;
   author: string;
+  updated_at: number;
+  deleted_at: number | null;
 };

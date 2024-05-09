@@ -9,21 +9,33 @@ const user = ref(storage.getCurrentUser());
 
 onMounted(async () => {
   dishes.value = await db.getDishes();
-  if (dishes.value.length === 0) {
-    dishes.value = storage.get("dishes") || [];
+  const localDishes = storage.getDishes() || [];
+  for (const dish of localDishes) {
+    const dbDish = dishes.value.find((d) => d.id === dish.id);
+    if (!dish.id || (dbDish && dbDish.updated_at < dish.updated_at)) {
+      saveDish(dish);
+    }
+    if (dbDish && dbDish.updated_at > dish.updated_at) {
+      storage.setDishes([
+        ...localDishes.filter((d) => d.id != dish.id),
+        dbDish,
+      ]);
+    }
   }
 });
 
-function deleteDish(id: Dish["id"]) {
-  const dish = dishes.value.find((d) => d.id === id);
+function deleteDish(dish: Dish) {
+  const dbDish = dishes.value.find((d) => d.id === dish.id);
   if (
     dish &&
     window.confirm(`Wollen Sie das Gericht "${dish.name}" wirklich löschen?`)
   ) {
     try {
-      db.deleteDish(id as string);
-      dishes.value = dishes.value.filter((d) => d.id !== id);
-      storage.set("dishes", dishes.value);
+      if (dbDish && dbDish.id) {
+        db.deleteDish(dbDish.id);
+      }
+      dishes.value = dishes.value.filter((d) => d !== dish);
+      storage.setDishes(dishes.value);
     } catch (e) {
       console.error(e);
     }
@@ -42,20 +54,22 @@ async function saveDish(dish: Dish) {
   dish = {
     ...dish,
     author: user.value,
+    updated_at: new Date().valueOf(),
   };
   try {
-    dish.id = await db.saveDish(dish);
+    dish.id = (await db.saveDish(dish)).id;
+  } catch (e) {
+    console.error("save went wrong", e);
+  } finally {
     if (!dishes.value.find((d) => d.id === dish.id)) {
       dishes.value.push(dish);
     } else {
       const index = dishes.value.findIndex((d) => d.id === dish.id);
       dishes.value[index] = dish;
     }
-    storage.set("dishes", dishes.value);
+    storage.setDishes(dishes.value);
     showDishDialog.value = false;
     currentDish.value = null;
-  } catch (e) {
-    console.error(e);
   }
 }
 
@@ -66,6 +80,7 @@ function showCreateDish() {
     name: "",
     ingredients: [],
     description: "",
+    updated_at: new Date().valueOf(),
   };
   showDishDialog.value = true;
 }
@@ -107,7 +122,11 @@ const filteredDishes = computed(() =>
 
 const searchableIngredients = computed(() =>
   [
-    ...new Set(dishes.value.flatMap((d) => d.ingredients.map((i) => i.name))),
+    ...new Set(
+      dishes.value.flatMap((d) =>
+        d.ingredients.map((i) => i.name[0].toUpperCase() + i.name.slice(1))
+      )
+    ),
   ].sort((a, b) => a.localeCompare(b))
 );
 
@@ -247,7 +266,7 @@ const authors = computed(() =>
                   <td>{{ dish.name }}</td>
                   <td>
                     <div class="d-flex justify-end">
-                      <v-btn color="error" @click.stop="deleteDish(dish.id)">
+                      <v-btn color="error" @click.stop="deleteDish(dish)">
                         <v-icon icon="mdi-delete"></v-icon>
                       </v-btn>
                       <v-btn
