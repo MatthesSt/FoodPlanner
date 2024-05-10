@@ -7,6 +7,8 @@ import * as db from "./firebase";
 const dishes = ref<Dish[]>([]);
 const user = ref(storage.getCurrentUser());
 
+const tableContentHeight = window.innerHeight - 52 + "px";
+
 onMounted(async () => {
   dishes.value = await db.getDishes();
   if (dishes.value.length === 0) {
@@ -97,10 +99,14 @@ const searchedIngredients = ref<string[]>([]);
 
 const filteredDishes = computed(() =>
   dishes.value
-    .filter((d) =>
-      searchedIngredients.value.every((i) =>
-        d.ingredients.some((di) => di.name.includes(i))
-      )
+    .filter(
+      (dish) =>
+        searchedIngredients.value.every((ingredient) =>
+          dish.ingredients.some((di) => di.name.includes(ingredient))
+        ) ||
+        dish.ingredients.every((ingredient) =>
+          searchedIngredients.value.includes(ingredient.name)
+        )
     )
     .sort((a, b) => a.name.localeCompare(b.name))
 );
@@ -177,111 +183,111 @@ const authors = computed(() =>
       </v-form>
     </v-card>
   </v-dialog>
-  <v-container class="pa-0">
-    <div style="overflow: auto">
-      <header
-        style="height: 52px"
-        class="bg-primary pa-2 d-flex justify-space-between align-center"
-      >
-        <span v-if="!editingUser" class="text-h6">{{
-          user.toUpperCase()
-        }}</span>
-        <span v-else style="width: 80%">
-          <v-text-field hide-details v-model="user"></v-text-field>
-        </span>
-        <v-btn
-          v-if="!editingUser"
-          @click.stop="editingUser = !editingUser"
-          color="primary"
-          class="px-2 py-2"
-          style="min-width: 0"
-          ><v-icon icon="mdi-pen"></v-icon
-        ></v-btn>
-        <v-btn
-          v-else
-          @click.stop="
-            () => {
-              editingUser = !editingUser;
-              saveUser();
-            }
-          "
-          color="primary"
-          class="px-2 py-2"
-          style="min-width: 0"
-          ><v-icon icon="mdi-check"></v-icon
-        ></v-btn>
-      </header>
-      <main class="bg-black pt-2">
-        <v-table fixed-header height="800px" class="bg-black">
-          <thead style="">
-            <tr>
-              <td class="filter">
-                <v-select
-                  :items="searchableIngredients"
-                  v-model="searchedIngredients"
-                  multiple
-                  hide-details
-                  append-icon="mdi-close"
-                  @click:append="searchedIngredients = []"
-                  :placeholder="filteredDishes.length + ' Gerichte'"
-                >
-                  <template v-slot:selection="{ index }">
-                    <span class="text-grey" v-if="index == 0">
-                      {{
-                        filteredDishes.length == 1
-                          ? "1 Gericht"
-                          : filteredDishes.length + " Gerichte"
-                      }}
-                    </span>
-                  </template></v-select
-                >
-              </td>
-              <td style="padding-left: 0; width: 152px">
-                <div class="d-flex justify-end">
-                  <v-btn color="primary" @click.stop="showCreateDish">
-                    <v-icon icon="mdi-plus"></v-icon>
-                  </v-btn>
-                </div>
-              </td>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="author of authors">
-              <tr>
-                <td>Gerichte von: {{ author }}</td>
-                <td style="padding-left: 0"></td>
-              </tr>
-              <template
-                v-for="dish in filteredDishes.filter((d) => d.author == author)"
+  <div style="overflow: auto">
+    <header
+      style="height: 52px"
+      class="bg-primary pa-2 d-flex justify-space-between align-center"
+    >
+      <span v-if="!editingUser" class="text-h6">{{ user.toUpperCase() }}</span>
+      <span v-else style="width: 80%">
+        <v-text-field hide-details v-model="user"></v-text-field>
+      </span>
+      <v-btn
+        v-if="!editingUser"
+        @click.stop="editingUser = !editingUser"
+        color="primary"
+        class="px-2 py-2"
+        style="min-width: 0"
+        ><v-icon icon="mdi-pen"></v-icon
+      ></v-btn>
+      <v-btn
+        v-else
+        @click.stop="
+          () => {
+            editingUser = !editingUser;
+            saveUser();
+          }
+        "
+        color="primary"
+        class="px-2 py-2"
+        style="min-width: 0"
+        ><v-icon icon="mdi-check"></v-icon
+      ></v-btn>
+    </header>
+    <main class="bg-black">
+      <v-table class="bg-black" fixed-header :height="tableContentHeight">
+        <thead>
+          <tr class="bg-black">
+            <td class="filter px-0">
+              <v-select
+                :items="searchableIngredients"
+                v-model="searchedIngredients"
+                multiple
+                hide-details
+                append-icon="mdi-close"
+                @click:append="searchedIngredients = []"
+                :placeholder="filteredDishes.length + ' Gerichte'"
               >
-                <tr>
-                  <td>{{ dish.name }}</td>
-                  <td style="padding-left: 0">
-                    <div class="d-flex justify-end">
-                      <v-btn color="error" @click.stop="deleteDish(dish.id)">
-                        <v-icon icon="mdi-delete"></v-icon>
-                      </v-btn>
-                      <v-btn
-                        color="secondary"
-                        class="ms-2"
-                        @click.stop="showEditDish(dish.id)"
-                      >
-                        <v-icon icon="mdi-pen"></v-icon
-                      ></v-btn>
-                    </div>
-                  </td>
-                </tr>
-              </template>
+                <template v-slot:selection="{ index }">
+                  <span class="text-grey" v-if="index == 0">
+                    {{
+                      filteredDishes.length == 1
+                        ? "1 Gericht"
+                        : filteredDishes.length + " Gerichte"
+                    }}
+                  </span>
+                </template></v-select
+              >
+            </td>
+            <td style="padding-left: 0; width: 152px">
+              <div class="d-flex justify-end">
+                <v-btn color="primary" @click.stop="showCreateDish">
+                  <v-icon icon="mdi-plus"></v-icon>
+                </v-btn>
+              </div>
+            </td>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-for="author of authors">
+            <tr class="bg-primary">
+              <td style="font-weight: bold; font-size: 1.2em">
+                {{ author
+                }}{{ author[author.length - 1] == "s" ? "'" : "'s" }} Gerichte
+                ({{ filteredDishes.filter((d) => d.author == author).length }})
+              </td>
+              <td style="padding-left: 0"></td>
+            </tr>
+            <template
+              v-for="dish in filteredDishes.filter((d) => d.author == author)"
+            >
+              <tr>
+                <td>{{ dish.name }}</td>
+                <td style="padding-left: 0">
+                  <div class="d-flex justify-end">
+                    <v-btn color="error" @click.stop="deleteDish(dish.id)">
+                      <v-icon icon="mdi-delete"></v-icon>
+                    </v-btn>
+                    <v-btn
+                      color="secondary"
+                      class="ms-2"
+                      @click.stop="showEditDish(dish.id)"
+                    >
+                      <v-icon icon="mdi-pen"></v-icon
+                    ></v-btn>
+                  </div>
+                </td>
+              </tr>
             </template>
-          </tbody>
-        </v-table>
-      </main>
-    </div>
-  </v-container>
+          </template>
+        </tbody>
+      </v-table>
+    </main>
+  </div>
 </template>
 
 <style>
-.filter .v-field__input {
+/* .filter .v-field__input {
   padding-inline: 5px;
-}
+} */
 </style>
