@@ -31,6 +31,17 @@ const vuetify = createVuetify({
 });
 
 import { initializeApp } from "firebase/app";
+
+//Staging
+// initializeApp({
+//   apiKey: "AIzaSyA4fJjqrLhKI8ESWoMYYc-WP2GQNZNFhZk",
+//   authDomain: "foodplannerstaging.firebaseapp.com",
+//   projectId: "foodplannerstaging",
+//   storageBucket: "foodplannerstaging.appspot.com",
+//   messagingSenderId: "820227252762",
+//   appId: "1:820227252762:web:696b92d939f65f854967a3",
+// });
+//Live
 initializeApp({
   apiKey: "AIzaSyAiWBx-rU8kJf5vYBlP658CkOHgTIxIzZg",
   authDomain: "foodplanner-cae21.firebaseapp.com",

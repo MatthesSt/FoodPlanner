@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import * as storage from "./storage";
 import { Dish } from "./types";
 import * as db from "./firebase";
@@ -7,7 +7,30 @@ import * as db from "./firebase";
 const dishes = ref<Dish[]>([]);
 const user = ref(storage.getCurrentUser());
 
-const tableContentHeight = window.innerHeight - 52 + "px";
+const tableContentHeight = window.innerHeight - 56 + "px";
+
+const currentDish = ref<Dish | null>(null);
+const currentDishErrors = ref({
+  name: "",
+  description: "",
+  reset: function () {
+    this.name = "";
+    this.description = "";
+  },
+});
+
+watch(
+  currentDish,
+  (dish) => {
+    if (
+      dish &&
+      dish.ingredients.every((i) => i.name !== "" && i.amount !== "")
+    ) {
+      addIngredient(dish);
+    }
+  },
+  { deep: true }
+);
 
 onMounted(async () => {
   dishes.value = await db.getDishes();
@@ -16,15 +39,13 @@ onMounted(async () => {
   }
 });
 
-function deleteDish(id: Dish["id"]) {
-  const dish = dishes.value.find((d) => d.id === id);
+function deleteDish(dish: Dish) {
   if (
-    dish &&
     window.confirm(`Wollen Sie das Gericht "${dish.name}" wirklich löschen?`)
   ) {
     try {
-      db.deleteDish(id as string);
-      dishes.value = dishes.value.filter((d) => d.id !== id);
+      db.deleteDish(dish.id as string);
+      dishes.value = dishes.value.filter((d) => d.id !== dish.id);
       storage.set("dishes", dishes.value);
     } catch (e) {
       console.error(e);
@@ -32,17 +53,24 @@ function deleteDish(id: Dish["id"]) {
   }
 }
 
-function showEditDish(id: Dish["id"]) {
-  const dish = dishes.value.find((d) => d.id === id);
-  if (dish) {
-    currentDish.value = dish;
-    showDishDialog.value = true;
+async function saveDish() {
+  if (!currentDish.value) return;
+  currentDishErrors.value.reset();
+  if (currentDish.value.name === "") {
+    currentDishErrors.value.name = "Bitte geben Sie einen Namen ein.";
   }
-}
+  if (currentDish.value.description === "") {
+    currentDishErrors.value.description =
+      "Bitte geben Sie eine Beschreibung ein.";
+  }
+  if (currentDishErrors.value.name || currentDishErrors.value.description)
+    return;
 
-async function saveDish(dish: Dish) {
-  dish = {
-    ...dish,
+  const dish = {
+    ...currentDish.value,
+    ingredients: currentDish.value.ingredients.filter(
+      (i) => i.name !== "" && i.amount !== ""
+    ),
     author: user.value,
   };
   try {
@@ -71,6 +99,10 @@ function showCreateDish() {
   };
   showDishDialog.value = true;
 }
+function showEditDish(dish: Dish) {
+  currentDish.value = dish;
+  showDishDialog.value = true;
+}
 
 function addIngredient(dish: Dish) {
   dish.ingredients.push({
@@ -87,8 +119,6 @@ function deleteIngredient(dish: Dish, ingredient: Dish["ingredients"][0]) {
   )
     dish.ingredients = dish.ingredients.filter((i) => i.id !== ingredient.id);
 }
-
-const currentDish = ref<Dish | null>(null);
 
 const editingUser = ref(false);
 function saveUser() {
@@ -129,40 +159,43 @@ const authors = computed(() =>
     @click.stop="showDishDialog = false"
   >
     <v-card @click.stop="() => {}" :link="false" class="bg-black">
-      <v-form class="ma-2">
+      <v-form class="ma-2" @submit.prevent="saveDish">
         <v-text-field
           variant="outlined"
           label="Name des Gerichts"
-          hide-details
+          autofocus
           v-model="currentDish.name"
+          :error-messages="currentDishErrors.name"
         />
-        <v-divider class="my-3"></v-divider>
+        <v-divider class="mb-4"></v-divider>
         <v-textarea
           label="REZEPT"
-          hide-details
           v-model="currentDish.description"
+          :error-messages="currentDishErrors.description"
         ></v-textarea>
-        <v-divider class="my-3"></v-divider>
+        <v-divider class="mb-4"></v-divider>
         <v-table class="bg-black">
-          <thead>
-            <tr>
-              <td class="pa-1">Zutat</td>
-              <td class="pa-1">Menge</td>
-              <td style="width: 0" class="pa-0"></td>
-            </tr>
-          </thead>
           <tbody>
             <tr v-for="ingredient in currentDish.ingredients">
               <td class="pa-1">
-                <v-text-field hide-details v-model="ingredient.name" />
+                <v-text-field
+                  hide-details
+                  v-model="ingredient.name"
+                  label="Zutat"
+                />
               </td>
               <td class="pa-1">
-                <v-text-field hide-details v-model="ingredient.amount" />
+                <v-text-field
+                  hide-details
+                  v-model="ingredient.amount"
+                  label="Menge"
+                />
               </td>
-              <td class="pa-0">
+              <td class="pa-0" style="width: 0">
                 <v-btn
                   class="px-0 py-2"
                   style="min-width: 0"
+                  tabindex="-1"
                   color="error"
                   @click.stop="deleteIngredient(currentDish, ingredient)"
                 >
@@ -172,11 +205,8 @@ const authors = computed(() =>
             </tr>
           </tbody>
         </v-table>
-        <div class="d-flex justify-space-between">
-          <v-btn color="primary" @click.stop="addIngredient(currentDish)">
-            <v-icon icon="mdi-plus"></v-icon>
-          </v-btn>
-          <v-btn color="success" @click.stop="saveDish(currentDish)"
+        <div class="d-flex justify-end mt-2">
+          <v-btn color="success" type="submit"
             ><v-icon icon="mdi-check"></v-icon
           ></v-btn>
         </div>
@@ -184,41 +214,34 @@ const authors = computed(() =>
     </v-card>
   </v-dialog>
   <div style="overflow: auto">
-    <header
-      style="height: 52px"
-      class="bg-primary pa-2 d-flex justify-space-between align-center"
-    >
-      <span v-if="!editingUser" class="text-h6">{{ user.toUpperCase() }}</span>
-      <span v-else style="width: 80%">
-        <v-text-field hide-details v-model="user"></v-text-field>
-      </span>
-      <v-btn
-        v-if="!editingUser"
-        @click.stop="editingUser = !editingUser"
-        color="primary"
-        class="px-2 py-2"
-        style="min-width: 0"
-        ><v-icon icon="mdi-pen"></v-icon
-      ></v-btn>
-      <v-btn
-        v-else
-        @click.stop="
-          () => {
-            editingUser = !editingUser;
-            saveUser();
-          }
-        "
-        color="primary"
-        class="px-2 py-2"
-        style="min-width: 0"
-        ><v-icon icon="mdi-check"></v-icon
-      ></v-btn>
+    <header style="height: 56px">
+      <form
+        class="bg-primary d-flex justify-space-between align-center h-100"
+        @submit.prevent="saveUser"
+      >
+        <span v-if="!editingUser" class="ms-4 text-h6">{{
+          user.toUpperCase()
+        }}</span>
+        <span v-else class="w-100">
+          <v-text-field hide-details v-model="user"></v-text-field>
+        </span>
+        <v-btn
+          :type="editingUser ? 'submit' : 'button'"
+          @click="editingUser = !editingUser"
+          color="primary"
+          class="px-2 mx-3"
+          style="min-width: 0"
+        >
+          <v-icon v-if="editingUser" icon="mdi-check"></v-icon>
+          <v-icon v-else icon="mdi-pen"></v-icon>
+        </v-btn>
+      </form>
     </header>
     <main class="bg-black">
       <v-table class="bg-black" fixed-header :height="tableContentHeight">
         <thead>
           <tr class="bg-black">
-            <td class="filter px-0">
+            <td class="filter px-0" colspan="2">
               <v-select
                 :items="searchableIngredients"
                 v-model="searchedIngredients"
@@ -239,43 +262,36 @@ const authors = computed(() =>
                 </template></v-select
               >
             </td>
-            <td style="padding-left: 0; width: 152px">
-              <div class="d-flex justify-end">
-                <v-btn color="primary" @click.stop="showCreateDish">
-                  <v-icon icon="mdi-plus"></v-icon>
-                </v-btn>
-              </div>
+            <td class="px-2 w-0">
+              <v-btn color="primary" @click.stop="showCreateDish">
+                <v-icon icon="mdi-plus"></v-icon>
+              </v-btn>
             </td>
           </tr>
         </thead>
         <tbody>
           <template v-for="author of authors">
             <tr class="bg-primary">
-              <td style="font-weight: bold; font-size: 1.2em">
+              <td style="font-weight: bold; font-size: 1.2em" colspan="3">
                 {{ author
                 }}{{ author[author.length - 1] == "s" ? "'" : "'s" }} Gerichte
                 ({{ filteredDishes.filter((d) => d.author == author).length }})
               </td>
-              <td style="padding-left: 0"></td>
             </tr>
             <template
               v-for="dish in filteredDishes.filter((d) => d.author == author)"
             >
               <tr>
                 <td>{{ dish.name }}</td>
-                <td style="padding-left: 0">
-                  <div class="d-flex justify-end">
-                    <v-btn color="error" @click.stop="deleteDish(dish.id)">
-                      <v-icon icon="mdi-delete"></v-icon>
-                    </v-btn>
-                    <v-btn
-                      color="secondary"
-                      class="ms-2"
-                      @click.stop="showEditDish(dish.id)"
-                    >
-                      <v-icon icon="mdi-pen"></v-icon
-                    ></v-btn>
-                  </div>
+                <td class="pa-0 w-0">
+                  <v-btn color="error" @click.stop="deleteDish(dish)">
+                    <v-icon icon="mdi-delete"></v-icon>
+                  </v-btn>
+                </td>
+                <td class="px-2">
+                  <v-btn color="secondary" @click.stop="showEditDish(dish)">
+                    <v-icon icon="mdi-pen"></v-icon
+                  ></v-btn>
                 </td>
               </tr>
             </template>
@@ -285,9 +301,3 @@ const authors = computed(() =>
     </main>
   </div>
 </template>
-
-<style>
-/* .filter .v-field__input {
-  padding-inline: 5px;
-} */
-</style>
