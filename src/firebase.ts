@@ -37,6 +37,7 @@ export async function saveDish(dish: Dish): Promise<string> {
   }).then((docRef) => docRef.id);
 }
 
-export async function deleteDish(id: string): Promise<void> {
+export async function deleteDish(id: Dish["id"]): Promise<void> {
+  if (!id) return;
   await deleteDoc(doc(getFirestore(), "dishes", id));
 }

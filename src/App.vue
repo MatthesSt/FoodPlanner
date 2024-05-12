@@ -44,7 +44,7 @@ function deleteDish(dish: Dish) {
     window.confirm(`Wollen Sie das Gericht "${dish.name}" wirklich löschen?`)
   ) {
     try {
-      db.deleteDish(dish.id as string);
+      db.deleteDish(dish.id);
       dishes.value = dishes.value.filter((d) => d.id !== dish.id);
       storage.set("dishes", dishes.value);
     } catch (e) {
